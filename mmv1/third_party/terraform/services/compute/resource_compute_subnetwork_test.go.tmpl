@@ -1401,6 +1401,10 @@ resource "google_compute_instance" "vm" {
       ip_cidr_range         = "/32"
     }
   }
+}
+`, context)
+}
+
 func testAccCheckSubnetIpCollectionMatchesPdp(t *testing.T, subnetResourceName, pdpResourceName string) resource.TestCheckFunc {
     return func(s *terraform.State) error {
         subnetRes, ok := s.RootModule().Resources[subnetResourceName]
