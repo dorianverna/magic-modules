@@ -43,11 +43,11 @@ if err != nil {
 		log.Printf("[DEBUG] InternalRange %q in use, attempting programmatic detachment", d.Id())
 
 		// Parse subnetwork project, region, and name from the API error message
-		re := regexp.MustCompile(`//compute.googleapis.com/(projects/([^/]+)/(?:locations|regions)/([^/]+)/subnetworks/([^/]+))`)
+		re := regexp.MustCompile(`//[^/]+/(projects/([^/]+)/(?:locations|regions)/([^/]+)/subnetworks/([^/]+))`)
 		match := re.FindStringSubmatch(gerr.Message)
 		if len(match) > 1 {
-			// Construct standard Compute API URL
-			subnetUrl := fmt.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/regions/%s/subnetworks/%s", match[2], match[3], match[4])
+			// Construct Compute API URL dynamically (compatible with distinct cloud universes / custom endpoints)
+			subnetUrl := fmt.Sprintf("%sprojects/%s/regions/%s/subnetworks/%s", config.ComputeBasePath, match[2], match[3], match[4])
 
 			// a) Fetch the referencing subnetwork
 			getRes, getErr := transport_tpg.SendRequest(transport_tpg.SendRequestOptions{
@@ -79,7 +79,7 @@ if err != nil {
 				if patchErr == nil {
 					// d) Manually poll for operation completion (avoids complex waiter dependencies)
 					if opName, ok := patchRes["name"].(string); ok {
-						opUrl := fmt.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/regions/%s/operations/%s", match[2], match[3], opName)
+						opUrl := fmt.Sprintf("%sprojects/%s/regions/%s/operations/%s", config.ComputeBasePath, match[2], match[3], opName)
 						for i := 0; i < 60; i++ { // Wait up to 5 mins
 							opRes, _ := transport_tpg.SendRequest(transport_tpg.SendRequestOptions{
 								Config: config, Method: "GET", Project: billingProject, RawURL: opUrl, UserAgent: userAgent,
