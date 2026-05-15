@@ -46,8 +46,12 @@ if err != nil {
 		re := regexp.MustCompile(`//[^/]+/(projects/([^/]+)/(?:locations|regions)/([^/]+)/subnetworks/([^/]+))`)
 		match := re.FindStringSubmatch(gerr.Message)
 		if len(match) > 1 {
+			computeBasePath, err := tpgresource.ReplaceVars(d, config, "{{"{{"}}ComputeBasePath{{"}}"}}")
+			if err != nil {
+				return err
+			}
 			// Construct Compute API URL dynamically (compatible with distinct cloud universes / custom endpoints)
-			subnetUrl := fmt.Sprintf("%sprojects/%s/regions/%s/subnetworks/%s", config.ComputeBasePath, match[2], match[3], match[4])
+			subnetUrl := fmt.Sprintf("%sprojects/%s/regions/%s/subnetworks/%s", computeBasePath, match[2], match[3], match[4])
 
 			// a) Fetch the referencing subnetwork
 			getRes, getErr := transport_tpg.SendRequest(transport_tpg.SendRequestOptions{
@@ -79,7 +83,7 @@ if err != nil {
 				if patchErr == nil {
 					// d) Manually poll for operation completion (avoids complex waiter dependencies)
 					if opName, ok := patchRes["name"].(string); ok {
-						opUrl := fmt.Sprintf("%sprojects/%s/regions/%s/operations/%s", config.ComputeBasePath, match[2], match[3], opName)
+						opUrl := fmt.Sprintf("%sprojects/%s/regions/%s/operations/%s", computeBasePath, match[2], match[3], opName)
 						for i := 0; i < 60; i++ { // Wait up to 5 mins
 							opRes, _ := transport_tpg.SendRequest(transport_tpg.SendRequestOptions{
 								Config: config, Method: "GET", Project: billingProject, RawURL: opUrl, UserAgent: userAgent,
